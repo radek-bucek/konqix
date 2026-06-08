@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Away: elliptical bubble, muted green -->
+  <path d="M 32 6
+           A 28 21 0 0 1 60 27
+           A 28 21 0 0 1 28 44
+           L 14 58
+           L 20 44
+           A 28 21 0 0 1 4 27
+           A 28 21 0 0 1 32 6 Z"
+        fill="#86c98c" stroke="#4e8c4e" stroke-width="2" stroke-linejoin="round"/>
+  <line x1="12" y1="19" x2="52" y2="19" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <line x1="12" y1="27" x2="44" y2="27" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <line x1="12" y1="35" x2="48" y2="35" stroke="white" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,47 @@
+# CMake / build outputs
+/build/
+/build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cbp
+
+# Local backups created by the project's own backup script
+/backup-*/
+
+# Compiled artefacts
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.exp
+*.lib
+*.pdb
+
+# Qt MOC / generated
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*_autogen/
+
+# Editor / IDE
+*.swp
+*~
+.idea/
+.vscode/
+.kdev4/
+*.kdev4
+*.user
+*.user.*
+.cache/
+.claude/
+compile_commands.json
+
+# Local-only: unpacked upstream reference trees
+/reference/

@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=Konqix
+GenericName=Instant Messenger
+Comment=Qt 6 instant messenger built on libpurple
+Exec=konqix
+Icon=konqix
+Terminal=false
+Categories=Network;InstantMessaging;Qt;
+Keywords=IM;Chat;Instant;Messenger;libpurple;XMPP;Jabber;IRC;Telegram;
+StartupNotify=true
+# Intentionally points at a WM_CLASS that no Konqix window ever uses,
+# so KDE Plasma's task manager will NOT associate running konqix
+# windows with this .desktop. Without this, KDE would push Icon=konqix
+# into the window's title bar and clobber the per-status icon we set
+# via QWidget::setWindowIcon. The launcher entry itself still uses the
+# Icon above.
+StartupWMClass=konqix-launcher-stub
