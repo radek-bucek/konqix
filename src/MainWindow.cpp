@@ -607,9 +607,29 @@ void MainWindow::onItemContextMenu(const QPoint &pos)
             [this, idx]() { onItemDoubleClicked(idx); });
         menu.addAction(tr("Show &history…"), this, [this, node]() {
             PurpleChat *c = reinterpret_cast<PurpleChat *>(node);
-            auto *dlg = new HistoryDialog(PURPLE_LOG_CHAT,
-                QString::fromUtf8(purple_chat_get_name(c)),
-                purple_chat_get_account(c), this);
+            PurpleAccount *acc = purple_chat_get_account(c);
+            // Log directories are keyed by the conversation identifier (room
+            // id), not the human-readable alias. purple_chat_get_name()
+            // returns the alias when one is set — the prpl's get_chat_name()
+            // helper returns the real id, matching what
+            // purple_conversation_get_name() would return for the live conv.
+            QString convName;
+            if (acc) {
+                if (PurplePlugin *plug = purple_find_prpl(
+                        purple_account_get_protocol_id(acc))) {
+                    PurplePluginProtocolInfo *prpl = PURPLE_PLUGIN_PROTOCOL_INFO(plug);
+                    if (prpl && prpl->get_chat_name) {
+                        char *n = prpl->get_chat_name(purple_chat_get_components(c));
+                        if (n) {
+                            convName = QString::fromUtf8(n);
+                            g_free(n);
+                        }
+                    }
+                }
+            }
+            if (convName.isEmpty())
+                convName = QString::fromUtf8(purple_chat_get_name(c));
+            auto *dlg = new HistoryDialog(PURPLE_LOG_CHAT, convName, acc, this);
             dlg->setAttribute(Qt::WA_DeleteOnClose);
             dlg->show();
         });

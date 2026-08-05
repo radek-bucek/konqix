@@ -1,5 +1,5 @@
 Name:           konqix
-Version:        0.1.0
+Version:        0.1.1
 Release:        1%{?dist}
 Summary:        Qt 6 instant messenger built on libpurple
 
@@ -57,6 +57,21 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/com.konqix.Konqix.des
 %{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
 
 %changelog
+* Wed Aug 05 2026 Radek Bucek <288079766+radek-bucek@users.noreply.github.com> - 0.1.1-1
+- Chat history from the buddy-list context menu ("Show history…" on a
+  chat) is no longer empty. The dialog now resolves the room
+  identifier via prpl->get_chat_name(components) — libpurple's log
+  directories are keyed by the id, not the human-readable alias.
+- Typing indicator no longer hides the last line of the conversation.
+  Showing the "X is typing…" footer shrinks the QTextBrowser viewport;
+  when the user was at the bottom we now re-pin to bottom after Qt's
+  layout pass so the last message stays visible.
+- Paste into the input field is plain-text only. Rich clipboard
+  content (font, colour, size) is stripped so pasted text keeps the
+  widget's configured font, matching every other IM client.
+- Input field auto-grows with typed content, capped at half of the
+  window height. The default (empty / short) height stays at 120 px
+  as before.
 * Sun May 31 2026 Radek Bucek <288079766+radek-bucek@users.noreply.github.com> - 0.1.0-1
 - Initial release.
 - Grouped buddy list with offline-hiding, four sort modes, persistent

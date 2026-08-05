@@ -98,6 +98,15 @@ protected:
                 return;
             }
         }
+        // Plain-text paste only — drop any HTML/rich formatting the clipboard
+        // brought along (font, colour, size) so the input keeps the widget's
+        // configured font. This matches every other IM client's paste-into-
+        // compose behaviour and stops "why does my Telegram message suddenly
+        // have Times New Roman 8pt" surprises.
+        if (src->hasText()) {
+            insertPlainText(src->text());
+            return;
+        }
         QTextEdit::insertFromMimeData(src);
     }
 #ifdef HAVE_HUNSPELL
@@ -361,8 +370,14 @@ ConversationWindow::ConversationWindow(PurpleConversation *conv, QWidget *parent
     m_input->setPlaceholderText(QStringLiteral(
         "Type a message and press Enter "
         "(paste/drop a file or use the attach button to send any file)…"));
-    m_input->setMaximumHeight(120);
     m_input->installEventFilter(this);
+    // Auto-grow the input with typed content, capped at half of the window
+    // height by updateInputHeight(). Seed the initial single-line height
+    // here so the widget doesn't briefly show at its default (~200 px).
+    m_input->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    connect(m_input, &QTextEdit::textChanged,
+            this, &ConversationWindow::updateInputHeight);
+    QTimer::singleShot(0, this, &ConversationWindow::updateInputHeight);
 
     // Outgoing typing notifications: tell the prpl we're typing while
     // the input has text. libpurple's serv_send_typing returns the
@@ -693,6 +708,14 @@ void ConversationWindow::addAttachment(const QString &path)
 void ConversationWindow::setTypingState(bool typing)
 {
     if (!m_typingLabel) return;
+
+    // Showing/hiding the label above shrinks/grows the QTextBrowser viewport.
+    // Qt keeps the scrollbar's `value` fixed while `maximum` changes, which
+    // pushes the last line below the new visible area. Detect "was at bottom"
+    // now and re-pin after Qt has re-laid out the widgets.
+    QScrollBar *bar = m_history ? m_history->verticalScrollBar() : nullptr;
+    const bool wasAtBottom = bar && bar->value() >= bar->maximum() - 4;
+
     if (typing) {
         QString name;
         if (m_conv) {
@@ -714,6 +737,15 @@ void ConversationWindow::setTypingState(bool typing)
         m_typingLabel->clear();
         m_typingLabel->hide();
         if (m_typingHideTimer) m_typingHideTimer->stop();
+    }
+
+    if (wasAtBottom && bar) {
+        QPointer<QTextBrowser> br = m_history;
+        QTimer::singleShot(0, this, [br]() {
+            if (!br) return;
+            if (auto *b = br->verticalScrollBar())
+                b->setValue(b->maximum());
+        });
     }
 }
 
@@ -777,6 +809,47 @@ void ConversationWindow::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
     markRead();
+    updateInputHeight();
+}
+
+void ConversationWindow::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    // Window height changed → the "half the window" cap moved with it.
+    updateInputHeight();
+}
+
+void ConversationWindow::updateInputHeight()
+{
+    if (!m_input) return;
+    QTextDocument *doc = m_input->document();
+    if (!doc) return;
+
+    // Match the document's wrap width to the widget's current viewport so
+    // multi-line typed text reports its true rendered height (otherwise
+    // QTextDocument uses -1 = single infinite line and the height stays at
+    // one row until the widget itself grows).
+    const qreal wrap = qMax(1, m_input->viewport()->width());
+    if (!qFuzzyCompare(doc->textWidth(), wrap))
+        doc->setTextWidth(wrap);
+
+    const int frame = m_input->frameWidth() * 2;
+    const QMargins m = m_input->contentsMargins();
+    const int chrome = frame + m.top() + m.bottom() + 2;
+
+    // The default (empty / short text) height matches what the input used
+    // to be sized at with setMaximumHeight(120) plus an Expanding policy —
+    // roughly seven lines. The field only grows *above* that as content
+    // exceeds it, up to half of the window.
+    const int defaultH = 120;
+    const int docH = int(doc->size().height()) + chrome;
+    const int cap = qMax(defaultH, height() / 2);
+    const int target = qBound(defaultH, docH, cap);
+
+    if (m_input->minimumHeight() != target || m_input->maximumHeight() != target) {
+        m_input->setMinimumHeight(target);
+        m_input->setMaximumHeight(target);
+    }
 }
 
 void ConversationWindow::changeEvent(QEvent *event)

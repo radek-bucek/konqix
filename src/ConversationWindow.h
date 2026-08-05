@@ -44,6 +44,7 @@ signals:
 protected:
     void closeEvent(QCloseEvent *event) override;
     void showEvent(QShowEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
     void changeEvent(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
@@ -58,6 +59,9 @@ private:
     void markRead();
     void showHistory();
     void showInfo();
+    // Resize the input text edit to fit the current document, capped at
+    // half the window height. Called on every textChanged and resize.
+    void updateInputHeight();
     // Add a pasted image (path = our temp PNG, ownership ours so we
     // unlink on cancel/send).
     void addPastedImage(const QString &path, const QImage &img);
