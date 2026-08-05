@@ -66,6 +66,22 @@ void MessageState::markRead(PurpleConversation *conv)
     emit unreadChanged();
 }
 
+void MessageState::forget(PurpleConversation *conv)
+{
+    if (!conv) return;
+    // Read the by-key entry BEFORE we lose the ability to derive it (we still
+    // can, since we haven't freed conv ourselves — libpurple is only about
+    // to). But if a caller passes an already-freed pointer, this would
+    // dereference garbage. onDestroy fires before purple frees the conv, so
+    // keyForConv() is still valid at call time.
+    auto it = m_byConv.find(conv);
+    if (it == m_byConv.end())
+        return;
+    m_byKey.remove(keyForConv(conv));
+    m_byConv.erase(it);
+    emit unreadChanged();
+}
+
 int MessageState::unreadFor(PurpleConversation *conv) const
 {
     return m_byConv.value(conv, 0);

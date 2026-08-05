@@ -186,6 +186,12 @@ void ConversationManager::onDestroy(PurpleConversation *conv)
             it.value()->deleteLater();
         m_windows.erase(it);
     }
+    // Also drop the conv from MessageState — otherwise its raw pointer
+    // lingers in the unread map and a later tray click routes through
+    // presentConversation() to a freed PurpleConversation, dereferencing
+    // freed memory inside libpurple.
+    if (MessageState *ms = MessageState::instance())
+        ms->forget(conv);
 }
 
 void ConversationManager::onWrite(PurpleConversation *conv, const QString &who,

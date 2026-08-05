@@ -1,5 +1,5 @@
 Name:           konqix
-Version:        0.1.1
+Version:        0.1.2
 Release:        1%{?dist}
 Summary:        Qt 6 instant messenger built on libpurple
 
@@ -57,6 +57,15 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/com.konqix.Konqix.des
 %{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
 
 %changelog
+* Wed Aug 05 2026 Radek Bucek <288079766+radek-bucek@users.noreply.github.com> - 0.1.2-1
+- Fix a SEGV in the tray-click handler when unread messages exist for a
+  conversation that libpurple has already freed (disconnect, prpl close,
+  chat rejoin). MessageState kept the raw PurpleConversation* in its
+  unread map; ConversationManager::onDestroy cleaned up its own window
+  but never told MessageState, so a later tray click routed the dangling
+  pointer into ConversationWindow's constructor and dereferenced freed
+  memory inside libpurple. onDestroy now calls MessageState::forget()
+  so the pointer is dropped before libpurple actually frees the conv.
 * Wed Aug 05 2026 Radek Bucek <288079766+radek-bucek@users.noreply.github.com> - 0.1.1-1
 - Chat history from the buddy-list context menu ("Show history…" on a
   chat) is no longer empty. The dialog now resolves the room

@@ -26,6 +26,10 @@ public:
     // Bookkeeping
     void messageReceived(PurpleConversation *conv);
     void markRead(PurpleConversation *conv);
+    // Drop any bookkeeping for a conversation that is about to be freed by
+    // libpurple. Called from ConversationManager::onDestroy so unread hooks
+    // (tray click, buddy-list indicator) never dereference a dangling ptr.
+    void forget(PurpleConversation *conv);
 
     // Queries
     int unreadFor(PurpleConversation *conv) const;
