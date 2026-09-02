@@ -1,5 +1,5 @@
 Name:           konqix
-Version:        0.1.2
+Version:        0.1.3
 Release:        1%{?dist}
 Summary:        Qt 6 instant messenger built on libpurple
 
@@ -57,6 +57,25 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/com.konqix.Konqix.des
 %{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
 
 %changelog
+* Wed Sep 02 2026 Radek Bucek <288079766+radek-bucek@users.noreply.github.com> - 0.1.3-1
+- New buddy list "last seen" indicator. View → Show last seen offers
+  Off (default), Approximate ("5 min ago" / "3 h ago" / "2 d ago" /
+  date), or Exact (HH:mm today, otherwise yyyy-MM-dd HH:mm). Rendered
+  as small grey condensed text after the buddy name, vertically
+  centred against the surrounding baseline. Approximate labels tick
+  on a 60-second timer without re-querying the prpl. Powered by a
+  new HtmlItemDelegate on the buddy tree.
+- Fix: DST-aware parsing of the tdlib-purple "Last online" tooltip
+  string — the zero-initialised struct tm's tm_isdst=0 made mktime
+  interpret every parsed timestamp as winter time, shifting DST-era
+  values one hour off from what Get info displayed.
+- Startup notification quiet window: for the first 30 s after launch
+  konqix suppresses per-message sound / tray flash / balloon so the
+  replay burst from libpurple (messages that landed on another
+  device while offline) doesn't drown the user in alerts. Unread
+  state still tracks in the buddy list; when the window ends, a
+  single summary balloon reports the count and — if any conv is
+  still unread — the tray flips to the attention icon.
 * Wed Aug 05 2026 Radek Bucek <288079766+radek-bucek@users.noreply.github.com> - 0.1.2-1
 - Fix a SEGV in the tray-click handler when unread messages exist for a
   conversation that libpurple has already freed (disconnect, prpl close,

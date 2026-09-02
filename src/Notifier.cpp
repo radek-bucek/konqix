@@ -3,6 +3,8 @@
 
 #include "Notifier.h"
 
+#include "MessageState.h"
+
 #include <QApplication>
 #include <QDir>
 #include <QFile>
@@ -23,6 +25,10 @@ namespace konqix {
 namespace {
 Notifier *g_instance = nullptr;
 constexpr int FLASH_INTERVAL_MS = 500;
+// How long after startup we suppress per-message alerts, in ms. Tuned
+// to cover the typical prpl replay burst (Telegram tdlib in particular
+// can take a good half-minute to catch up on a busy account).
+constexpr int STARTUP_QUIET_MS = 30 * 1000;
 } // namespace
 
 Notifier *Notifier::instance() { return g_instance; }
@@ -36,6 +42,7 @@ Notifier::Notifier(QObject *parent) : QObject(parent)
     m_iconInvisible = new QIcon(QStringLiteral(":/icons/konqix-invisible.svg"));
     m_iconOffline   = new QIcon(QStringLiteral(":/icons/konqix-offline.svg"));
     m_iconAlt       = new QIcon(QStringLiteral(":/icons/konqix-attention.svg"));
+    QTimer::singleShot(STARTUP_QUIET_MS, this, &Notifier::endStartupQuiet);
 }
 
 Notifier::~Notifier()
@@ -79,6 +86,16 @@ void Notifier::setTrayIcon(QSystemTrayIcon *tray)
 
 void Notifier::notifyIncoming(const QString &who, const QString &message)
 {
+    // Startup silence: absorb the initial replay burst so the user isn't
+    // buried in per-message pings for stuff that already happened on
+    // another device. We only count here; endStartupQuiet() surfaces a
+    // single summary balloon (and flips the tray to attention if any
+    // conversation ended up unread).
+    if (m_startupQuiet) {
+        ++m_startupMissed;
+        return;
+    }
+
     if (purple_prefs_get_bool("/konqix/notify/sound"))
         playSound();
     if (purple_prefs_get_bool("/konqix/notify/flash_tray"))
@@ -90,6 +107,30 @@ void Notifier::notifyIncoming(const QString &who, const QString &message)
         if (preview.length() > 120)
             preview = preview.left(117) + QStringLiteral("…");
         m_tray->showMessage(who, preview, QSystemTrayIcon::Information, 5000);
+    }
+}
+
+void Notifier::endStartupQuiet()
+{
+    m_startupQuiet = false;
+
+    const int missed = m_startupMissed;
+    m_startupMissed = 0;
+
+    // If any conversation is still unread after the replay settled,
+    // flip the tray to the attention icon so the user has a persistent
+    // visual cue matching the per-buddy indicators in the list.
+    if (MessageState::instance() && MessageState::instance()->totalUnread() > 0
+        && purple_prefs_get_bool("/konqix/notify/flash_tray")) {
+        flashTray();
+    }
+
+    if (missed > 0 && m_tray && QSystemTrayIcon::supportsMessages()
+        && purple_prefs_get_bool("/konqix/notify/balloon")) {
+        m_tray->showMessage(
+            tr("konqix"),
+            tr("%n new message(s) received while starting up.", "", missed),
+            QSystemTrayIcon::Information, 5000);
     }
 }
 

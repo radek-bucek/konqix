@@ -7,6 +7,7 @@
 
 #include <QBrush>
 #include <QColor>
+#include <QDateTime>
 #include <QFileInfo>
 #include <QFont>
 #include <QIcon>
@@ -115,6 +116,16 @@ BuddyListModel::BuddyListModel(QObject *parent) : QAbstractItemModel(parent)
         connect(cm, &ConversationManager::conversationActivity,
                 this, [this](PurpleConversation *) { rebuild(); });
     }
+
+    // Tick the approximate "N min ago" labels roughly once a minute.
+    // The underlying "seen" timestamp is stable (already cached), so
+    // this just re-formats — no prpl tooltip re-queries. Runs always
+    // and no-ops in Off / Exact modes.
+    auto *approxTick = new QTimer(this);
+    approxTick->setInterval(60 * 1000);
+    connect(approxTick, &QTimer::timeout,
+            this, &BuddyListModel::refreshLastSeenLabels);
+    approxTick->start();
 }
 
 BuddyListModel::~BuddyListModel()
@@ -259,6 +270,10 @@ static time_t parseLastOnlineLabel(const char *val)
     if (std::strcmp(val, "last month") == 0) return now - 30 * 24 * 3600;
     // Otherwise it's ctime() output: "Sun May 24 13:08:33 2026\n"
     struct tm tm = {};
+    tm.tm_isdst = -1;   // let mktime auto-detect DST — without this the
+                        // zero-initialised tm_isdst=0 makes mktime treat
+                        // every parsed time as winter, so parsed values
+                        // that fall in DST come back one hour off.
     if (strptime(val, "%a %b %d %H:%M:%S %Y", &tm))
         return mktime(&tm);
     return 0;
@@ -326,6 +341,97 @@ static int nodeLastSeen(PurpleBlistNode *n)
     }
     c.insert(b, v);
     return v;
+}
+
+// Approximate age string:
+//   < 1 h  → "N min ago" (0 min for < 1 min)
+//   < 24 h → "N h ago"
+//   < 30 d → "N d ago"
+//   older  → date only
+static QString formatLastSeenApprox(int ts, int now)
+{
+    if (ts <= 0) return {};
+    const int diff = qMax(0, now - ts);
+    if (diff < 3600)       return QStringLiteral("%1 min ago").arg(diff / 60);
+    if (diff < 86400)      return QStringLiteral("%1 h ago").arg(diff / 3600);
+    if (diff < 30 * 86400) return QStringLiteral("%1 d ago").arg(diff / 86400);
+    return QDateTime::fromSecsSinceEpoch(ts).toString(QStringLiteral("yyyy-MM-dd"));
+}
+
+// Exact age string:
+//   same calendar day  → "HH:mm"
+//   otherwise          → "yyyy-MM-dd HH:mm"
+static QString formatLastSeenExact(int ts, int now)
+{
+    if (ts <= 0) return {};
+    QDateTime dt = QDateTime::fromSecsSinceEpoch(ts);
+    QDateTime today = QDateTime::fromSecsSinceEpoch(now);
+    if (dt.date() == today.date())
+        return dt.toString(QStringLiteral("HH:mm"));
+    return dt.toString(QStringLiteral("yyyy-MM-dd HH:mm"));
+}
+
+QString BuddyListModel::lastSeenLabel(PurpleBuddy *b) const
+{
+    if (m_lastSeenDisplay == LastSeenDisplay::Off || !b)
+        return {};
+    const int seen = nodeLastSeen(reinterpret_cast<PurpleBlistNode *>(b));
+    if (seen <= 0)
+        return {};
+    const int now = (int)time(nullptr);
+    // Available buddies fall through nodeLastSeen()'s presence branch to
+    // time(nullptr) — showing "HH:mm" for someone who's live *now* is
+    // noise that would tick every rebuild. Skip when the value is
+    // essentially "now" (within a minute).
+    if (now - seen < 60)
+        return {};
+    return (m_lastSeenDisplay == LastSeenDisplay::Exact)
+        ? formatLastSeenExact(seen, now)
+        : formatLastSeenApprox(seen, now);
+}
+
+static QString statusText(PurpleBuddy *buddy);   // defined further down
+
+QString BuddyListModel::formatBuddyRow(const QString &name, PurpleBuddy *b) const
+{
+    QString status = b ? statusText(b) : QString();
+    if (status == QLatin1String("available"))
+        status.clear();
+    const QString ago = lastSeenLabel(b);
+
+    if (status.isEmpty() && ago.isEmpty())
+        return name;
+
+    // Status and time both render as small grey condensed metadata
+    // next to the buddy name — one span carries both. HtmlItemDelegate
+    // spots the explicit font-family as its marker and applies the
+    // shrink + AlignMiddle programmatically (QTextDocument's CSS
+    // parser drops font-size %/em and vertical-align silently).
+    // Font stack: prefer a real condensed face if one is installed;
+    // font-stretch as a hint for engines that can synthesise it; the
+    // generic sans-serif keeps rendering sane on minimal systems.
+    static const QLatin1String kSecondaryStyle(
+        "color:gray;"
+        "font-size:0.6em;"
+        "font-stretch:condensed;"
+        "vertical-align:middle;"
+        "font-family:'Roboto Condensed','Noto Sans Condensed',"
+        "'DejaVu Sans Condensed','Liberation Sans Narrow',"
+        "'Arial Narrow',sans-serif;");
+
+    QString inside;
+    if (!status.isEmpty())
+        inside = status.toHtmlEscaped();
+    if (!ago.isEmpty()) {
+        if (!inside.isEmpty()) inside += QLatin1Char(' ');
+        inside += ago.toHtmlEscaped();
+    }
+    // Non-breaking spaces (&nbsp; = U+00A0) survive QTextDocument's
+    // inline whitespace normalisation; ordinary spaces (and even the
+    // supposedly wide &emsp;) get collapsed to a single glyph on
+    // inline runs.
+    return QStringLiteral("%1&nbsp;&nbsp;<span style=\"%2\">%3</span>")
+        .arg(name.toHtmlEscaped(), kSecondaryStyle, inside);
 }
 
 QList<PurpleBlistNode *> BuddyListModel::visibleChildren(PurpleBlistNode *parent) const
@@ -493,23 +599,13 @@ QVariant BuddyListModel::data(const QModelIndex &index, int role) const
                 ? QString::fromUtf8(alias)
                 : QString::fromUtf8(b ? purple_buddy_get_name(b)
                                       : "(empty contact)");
-            // Show the priority buddy's status here too, so the list stays
-            // informative even when contacts are collapsed by default.
-            if (b) {
-                QString st = statusText(b);
-                if (!st.isEmpty() && st != QLatin1String("available"))
-                    return QStringLiteral("%1  [%2]").arg(name, st);
-            }
-            return name;
+            return formatBuddyRow(name, b);
         }
         case PURPLE_BLIST_BUDDY_NODE: {
             PurpleBuddy *b = reinterpret_cast<PurpleBuddy *>(node);
             const char *alias = purple_buddy_get_alias(b);
             QString name = QString::fromUtf8(alias ? alias : purple_buddy_get_name(b));
-            QString st = statusText(b);
-            return (!st.isEmpty() && st != QLatin1String("available"))
-                ? QStringLiteral("%1  [%2]").arg(name, st)
-                : name;
+            return formatBuddyRow(name, b);
         }
         case PURPLE_BLIST_CHAT_NODE: {
             PurpleChat *c = reinterpret_cast<PurpleChat *>(node);
@@ -589,6 +685,53 @@ void BuddyListModel::setShowAway(bool show)
         return;
     m_showAway = show;
     rebuild();
+}
+
+BuddyListModel::LastSeenDisplay
+BuddyListModel::parseLastSeenDisplay(const QString &s)
+{
+    if (s == QLatin1String("approx")) return LastSeenDisplay::Approximate;
+    if (s == QLatin1String("exact"))  return LastSeenDisplay::Exact;
+    return LastSeenDisplay::Off;
+}
+
+QString BuddyListModel::lastSeenDisplayToString(LastSeenDisplay m)
+{
+    switch (m) {
+    case LastSeenDisplay::Approximate: return QStringLiteral("approx");
+    case LastSeenDisplay::Exact:       return QStringLiteral("exact");
+    case LastSeenDisplay::Off:         break;
+    }
+    return QStringLiteral("off");
+}
+
+void BuddyListModel::setLastSeenDisplay(LastSeenDisplay mode)
+{
+    if (m_lastSeenDisplay == mode)
+        return;
+    m_lastSeenDisplay = mode;
+    rebuild();
+}
+
+void BuddyListModel::refreshLastSeenLabels()
+{
+    if (m_lastSeenDisplay != LastSeenDisplay::Approximate)
+        return;
+    // Walk the tree and re-emit DisplayRole for every row so buddies
+    // and contact rows re-format their "N min ago" label against the
+    // clock. We don't clear the seen-value cache: the underlying
+    // timestamp doesn't drift, only the diff against `now` does.
+    std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
+        const int rows = rowCount(parent);
+        if (rows > 0) {
+            emit dataChanged(index(0, 0, parent),
+                             index(rows - 1, 0, parent),
+                             {Qt::DisplayRole});
+        }
+        for (int i = 0; i < rows; ++i)
+            walk(index(i, 0, parent));
+    };
+    walk(QModelIndex());
 }
 
 void BuddyListModel::setSortByStatus(bool on)

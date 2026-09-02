@@ -40,6 +40,18 @@ private:
     void flashTray();
     QIcon *baseIcon() const;
 
+    // Startup-quiet window: for the first N seconds after Notifier is
+    // constructed we suppress per-message flash / sound / balloon and
+    // only count how many messages arrived. When the window ends we
+    // emit a single summary balloon and — if any conversations remain
+    // unread — flip the tray to the attention icon so the user still
+    // sees "there is stuff to look at". Rationale: right after login,
+    // libpurple replays messages that landed while offline (or on a
+    // sibling device) and each one would otherwise fire its own alert.
+    void endStartupQuiet();
+    bool m_startupQuiet = true;
+    int m_startupMissed = 0;
+
     QPointer<QSystemTrayIcon> m_tray;
     QTimer *m_flashTimer = nullptr;
     bool m_flashAlt = false;

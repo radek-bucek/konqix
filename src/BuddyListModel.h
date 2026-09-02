@@ -46,6 +46,15 @@ public:
     bool showOffline() const { return m_showOffline; }
     void setShowAway(bool show);
     bool showAway() const { return m_showAway; }
+    enum class LastSeenDisplay {
+        Off,           // no suffix
+        Approximate,   // "5m ago" / "3h ago" / "2d ago" / date
+        Exact,         // "HH:MM" (today) or "YYYY-MM-DD HH:MM"
+    };
+    static LastSeenDisplay parseLastSeenDisplay(const QString &s);
+    static QString lastSeenDisplayToString(LastSeenDisplay m);
+    void setLastSeenDisplay(LastSeenDisplay mode);
+    LastSeenDisplay lastSeenDisplay() const { return m_lastSeenDisplay; }
     void setSortByStatus(bool on);
     bool sortByStatus() const { return m_sortByStatus; }
     void setSecondarySort(SecondarySort mode);
@@ -55,6 +64,11 @@ public:
     void rebuild();
     void nodeUpdated(PurpleBlistNode *node);
     void nodeRemoved(PurpleBlistNode *node);
+    // Re-emit dataChanged() for every buddy/contact row so approximate
+    // "N min ago" labels re-format against the current clock. Called
+    // once a minute by an internal QTimer; no-op outside Approximate
+    // mode.
+    void refreshLastSeenLabels();
 
 signals:
     void modelChanged();
@@ -64,9 +78,20 @@ private:
     bool buddyVisible(PurpleBuddy *buddy) const;
     QList<PurpleBlistNode *> visibleChildren(PurpleBlistNode *parent) const;
     int childRow(PurpleBlistNode *node) const;
+    // Human-readable last-seen text (e.g. "14:32", "12 min ago") for
+    // the given buddy, or empty when disabled / unknown / essentially
+    // "now". Rendered by data() inside the same [status …] bracket as
+    // the status label, in a smaller grey font.
+    QString lastSeenLabel(PurpleBuddy *b) const;
+    // Build the final display string for a buddy/contact row: name plus
+    // an optional "[status]", "[time]" or "[status time]" bracket. Uses
+    // rich HTML when a time is present (so the HtmlItemDelegate can draw
+    // the time smaller and grey); plain text otherwise.
+    QString formatBuddyRow(const QString &name, PurpleBuddy *b) const;
 
     bool m_showOffline = false;
     bool m_showAway = true;
+    LastSeenDisplay m_lastSeenDisplay = LastSeenDisplay::Off;
     bool m_sortByStatus = true;
     SecondarySort m_secondarySort = SecondarySort::Name;
 };

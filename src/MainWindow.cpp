@@ -6,6 +6,7 @@
 #include "AccountsDialog.h"
 #include "ConversationManager.h"
 #include "HistoryDialog.h"
+#include "HtmlItemDelegate.h"
 #include "LogIndex.h"
 #include "Notifier.h"
 #include "PurpleCore.h"
@@ -78,12 +79,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // Apply persisted prefs to the model.
     m_model->setShowOffline(purple_prefs_get_bool("/konqix/blist/show_offline"));
     m_model->setShowAway(purple_prefs_get_bool("/konqix/blist/show_away"));
+    m_model->setLastSeenDisplay(BuddyListModel::parseLastSeenDisplay(
+        QString::fromUtf8(purple_prefs_get_string("/konqix/blist/last_seen_display"))));
     m_model->setSortByStatus(purple_prefs_get_bool("/konqix/blist/sort_by_status"));
     m_model->setSecondarySort(BuddyListModel::parseSecondarySort(
         QString::fromUtf8(purple_prefs_get_string("/konqix/blist/sort_secondary"))));
 
     m_tree = new QTreeView(central);
     m_tree->setModel(m_model);
+    // Rows may carry a small grey "(seen X ago)" HTML suffix — the
+    // delegate falls through to default painting for plain rows.
+    m_tree->setItemDelegate(new HtmlItemDelegate(m_tree));
     m_tree->setHeaderHidden(true);
     m_tree->setRootIsDecorated(true);
     m_tree->setIndentation(14);
@@ -288,6 +294,28 @@ void MainWindow::buildMenus()
     addSecondary(tr("&Name (A–Z)"),        BuddyListModel::SecondarySort::Name);
     addSecondary(tr("Last &conversation"), BuddyListModel::SecondarySort::ActivityDesc);
     addSecondary(tr("Last &seen online"),  BuddyListModel::SecondarySort::LastSeen);
+
+    // Optional "(seen …)" suffix on offline buddies. Three exclusive
+    // options — off / approximate / exact — persisted in the string
+    // pref /konqix/blist/last_seen_display.
+    auto *lastSeenMenu = viewMenu->addMenu(tr("Show &last seen"));
+    auto *lastSeenGroup = new QActionGroup(this);
+    lastSeenGroup->setExclusive(true);
+    auto addLastSeen = [&](const QString &label,
+                           BuddyListModel::LastSeenDisplay mode) {
+        auto *a = lastSeenMenu->addAction(label);
+        a->setCheckable(true);
+        lastSeenGroup->addAction(a);
+        a->setChecked(m_model->lastSeenDisplay() == mode);
+        connect(a, &QAction::triggered, this, [this, mode]() {
+            m_model->setLastSeenDisplay(mode);
+            purple_prefs_set_string("/konqix/blist/last_seen_display",
+                BuddyListModel::lastSeenDisplayToString(mode).toUtf8().constData());
+        });
+    };
+    addLastSeen(tr("&Off"),             BuddyListModel::LastSeenDisplay::Off);
+    addLastSeen(tr("&Approximate time"), BuddyListModel::LastSeenDisplay::Approximate);
+    addLastSeen(tr("&Exact time"),       BuddyListModel::LastSeenDisplay::Exact);
 
     viewMenu->addSeparator();
 #ifdef HAVE_HUNSPELL

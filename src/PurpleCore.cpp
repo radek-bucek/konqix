@@ -92,6 +92,11 @@ extern "C" void konqix_prefs_init(void)
     purple_prefs_add_none("/konqix/blist");
     purple_prefs_add_bool("/konqix/blist/show_offline", FALSE);
     purple_prefs_add_bool("/konqix/blist/show_away", TRUE);
+    // Append a smaller grey "(seen …)" tag next to offline buddies.
+    // "off" (default), "approx" ("5m ago" / "3h ago" / "2d ago" / date),
+    // or "exact" (HH:MM today, YYYY-MM-DD HH:MM otherwise). Selected
+    // via View → Show last seen.
+    purple_prefs_add_string("/konqix/blist/last_seen_display", "off");
     // Primary sort key (toggle): if true, status comes first.
     purple_prefs_add_bool("/konqix/blist/sort_by_status", TRUE);
     // Secondary sort key (radio): "name" (default) or "activity".
