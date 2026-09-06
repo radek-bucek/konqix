@@ -4,6 +4,7 @@
 #include "BuddyListModel.h"
 #include "ConversationManager.h"
 #include "MessageState.h"
+#include "StatusIcons.h"
 
 #include <QBrush>
 #include <QColor>
@@ -17,6 +18,7 @@ extern "C" {
 #include <libpurple/log.h>
 #include <libpurple/notify.h>
 #include <libpurple/prpl.h>
+#include <libpurple/status.h>
 }
 
 #include <QHash>
@@ -179,6 +181,20 @@ static int statusRank(PurpleBuddy *b)
     PurplePresence *p = purple_buddy_get_presence(b);
     if (p && !purple_presence_is_available(p)) return 20;
     return 10;
+}
+
+// The primitive behind a buddy's active status, for icon lookup via
+// iconForStatusPrimitive() — the same mapping the status combo box and
+// tray/title-bar icon use. Offline buddies have no active status object
+// worth inspecting, so that case is resolved explicitly.
+static int statusPrimitiveForBuddy(PurpleBuddy *b)
+{
+    if (!b || !PURPLE_BUDDY_IS_ONLINE(b))
+        return PURPLE_STATUS_OFFLINE;
+    PurplePresence *p = purple_buddy_get_presence(b);
+    PurpleStatus *s = p ? purple_presence_get_active_status(p) : nullptr;
+    PurpleStatusType *t = s ? purple_status_get_type(s) : nullptr;
+    return t ? purple_status_type_get_primitive(t) : PURPLE_STATUS_AVAILABLE;
 }
 
 static PurpleBuddy *nodeBuddy(PurpleBlistNode *n)
@@ -621,6 +637,16 @@ QVariant BuddyListModel::data(const QModelIndex &index, int role) const
         // without changing the text colour.
         static const QIcon attnIcon(QStringLiteral(":/icons/konqix-attention.svg"));
         return attnIcon;
+    }
+
+    if (role == Qt::DecorationRole
+        && (type == PURPLE_BLIST_BUDDY_NODE || type == PURPLE_BLIST_CONTACT_NODE)) {
+        PurpleBuddy *b = (type == PURPLE_BLIST_BUDDY_NODE)
+            ? reinterpret_cast<PurpleBuddy *>(node)
+            : purple_contact_get_priority_buddy(
+                  reinterpret_cast<PurpleContact *>(node));
+        if (b)
+            return iconForStatusPrimitive(statusPrimitiveForBuddy(b));
     }
 
     if (role == Qt::ForegroundRole) {

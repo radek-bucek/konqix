@@ -10,6 +10,7 @@
 #include "LogIndex.h"
 #include "Notifier.h"
 #include "PurpleCore.h"
+#include "StatusIcons.h"
 #ifdef HAVE_HUNSPELL
 #include "SpellChecker.h"
 #endif
@@ -48,19 +49,6 @@ extern "C" {
 }
 
 namespace konqix {
-
-// Map a libpurple status primitive to the matching tray-style SVG icon.
-// Shared between the tray (Notifier) and the main-window title bar.
-static QIcon iconForStatusPrimitive(int prim)
-{
-    switch (prim) {
-        case PURPLE_STATUS_AWAY:          return QIcon(QStringLiteral(":/icons/konqix-away.svg"));
-        case PURPLE_STATUS_EXTENDED_AWAY: return QIcon(QStringLiteral(":/icons/konqix-xaway.svg"));
-        case PURPLE_STATUS_INVISIBLE:     return QIcon(QStringLiteral(":/icons/konqix-invisible.svg"));
-        case PURPLE_STATUS_OFFLINE:       return QIcon(QStringLiteral(":/icons/konqix-offline.svg"));
-        default:                          return QIcon(QStringLiteral(":/icons/konqix.svg"));
-    }
-}
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
