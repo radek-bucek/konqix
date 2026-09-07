@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Radek Bucek
 
 #include "ConversationWindow.h"
+#include "BuddyListModel.h"
 #include "HistoryDialog.h"
 #include "LogFormat.h"
 #include "MessageState.h"
 #include "Notifier.h"
 #include "SmoothBrowser.h"
+#include "StatusIcons.h"
 
 #ifdef HAVE_HUNSPELL
 #include "SpellChecker.h"
@@ -250,6 +252,70 @@ ConversationWindow::ConversationWindow(PurpleConversation *conv, QWidget *parent
         }
     }
 #endif
+
+    // IM peer name + status icon, mirroring the buddy list's icon, in the
+    // menu bar's top-right corner. Chats have no single peer, and some
+    // conversations (e.g. a message from someone not on the blist) have
+    // no matching buddy — skip the widget entirely in those cases.
+    if (!isChat) {
+        PurpleAccount *convAcc = purple_conversation_get_account(conv);
+        const char *peerName = purple_conversation_get_name(conv);
+        m_peerBuddy = (convAcc && peerName)
+            ? purple_find_buddy(convAcc, peerName) : nullptr;
+        if (m_peerBuddy) {
+            m_peerWidget = new QWidget(menuBar);
+            auto *peerWidget = m_peerWidget;
+            auto *peerLayout = new QHBoxLayout(peerWidget);
+            peerLayout->setContentsMargins(0, 0, 8, 0);
+            peerLayout->setSpacing(4);
+            m_peerStatusIcon = new QLabel(peerWidget);
+            m_peerStatusIcon->setFixedSize(16, 16);
+            m_peerStatusIcon->setScaledContents(true);
+            m_peerNameLabel = new QLabel(peerWidget);
+            peerLayout->addWidget(m_peerStatusIcon, 0, Qt::AlignVCenter);
+            peerLayout->addWidget(m_peerNameLabel, 0, Qt::AlignVCenter);
+            // QMenuBar plants a corner widget's top edge at the bar's
+            // content origin and gives it exactly its own sizeHint
+            // height — it does not centre it against the menu items.
+            // Matching our height to the "Conversation" action's own
+            // rendered rect (rather than menuBar's full sizeHint, which
+            // overflows past the bar) puts us in the same row Qt already
+            // computed for that text, so the two align regardless of how
+            // tall the active style pads the bar.
+            peerWidget->setFixedHeight(
+                menuBar->actionGeometry(convMenu->menuAction()).height());
+            menuBar->setCornerWidget(peerWidget, Qt::TopRightCorner);
+
+            updatePeerStatus();
+            // Initial visibility mirrors the buddy list's status icon
+            // toggle so both places switch together.
+            m_peerWidget->setVisible(
+                purple_prefs_get_bool("/konqix/blist/show_status_icons"));
+            if (auto *blm = BuddyListModel::instance()) {
+                connect(blm, &BuddyListModel::buddyStatusChanged, this,
+                    [this](PurpleBuddy *b) {
+                        if (b == m_peerBuddy)
+                            updatePeerStatus();
+                    });
+                // libpurple frees the buddy right after the remove
+                // ui-op returns — drop our raw pointer to it and hide
+                // the peer widget before any later access can touch
+                // freed memory (updatePeerStatus() would otherwise call
+                // purple_buddy_get_alias on the dangling handle).
+                connect(blm, &BuddyListModel::buddyRemoved, this,
+                    [this](PurpleBuddy *b) {
+                        if (b != m_peerBuddy) return;
+                        m_peerBuddy = nullptr;
+                        if (m_peerWidget) m_peerWidget->hide();
+                    });
+                connect(blm, &BuddyListModel::showStatusIconsChanged, this,
+                    [this](bool show) {
+                        if (m_peerWidget && m_peerBuddy)
+                            m_peerWidget->setVisible(show);
+                    });
+            }
+        }
+    }
 
     outer->setMenuBar(menuBar);
 
@@ -783,6 +849,17 @@ void ConversationWindow::showInfo()
     }
     serv_get_info(purple_account_get_connection(acc),
                   purple_conversation_get_name(m_conv));
+}
+
+void ConversationWindow::updatePeerStatus()
+{
+    if (!m_peerBuddy || !m_peerStatusIcon || !m_peerNameLabel)
+        return;
+    const char *alias = purple_buddy_get_alias(m_peerBuddy);
+    m_peerNameLabel->setText(QString::fromUtf8(
+        alias && *alias ? alias : purple_buddy_get_name(m_peerBuddy)));
+    QIcon icon = iconForStatusPrimitive(statusPrimitiveForBuddy(m_peerBuddy));
+    m_peerStatusIcon->setPixmap(icon.pixmap(16, 16));
 }
 
 void ConversationWindow::markRead()

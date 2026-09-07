@@ -10,6 +10,7 @@
 #include "LogIndex.h"
 #include "Notifier.h"
 #include "PurpleCore.h"
+#include "StatusIcons.h"
 #ifdef HAVE_HUNSPELL
 #include "SpellChecker.h"
 #endif
@@ -49,19 +50,6 @@ extern "C" {
 
 namespace konqix {
 
-// Map a libpurple status primitive to the matching tray-style SVG icon.
-// Shared between the tray (Notifier) and the main-window title bar.
-static QIcon iconForStatusPrimitive(int prim)
-{
-    switch (prim) {
-        case PURPLE_STATUS_AWAY:          return QIcon(QStringLiteral(":/icons/konqix-away.svg"));
-        case PURPLE_STATUS_EXTENDED_AWAY: return QIcon(QStringLiteral(":/icons/konqix-xaway.svg"));
-        case PURPLE_STATUS_INVISIBLE:     return QIcon(QStringLiteral(":/icons/konqix-invisible.svg"));
-        case PURPLE_STATUS_OFFLINE:       return QIcon(QStringLiteral(":/icons/konqix-offline.svg"));
-        default:                          return QIcon(QStringLiteral(":/icons/konqix.svg"));
-    }
-}
-
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle(QStringLiteral("Konqix"));
@@ -79,6 +67,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // Apply persisted prefs to the model.
     m_model->setShowOffline(purple_prefs_get_bool("/konqix/blist/show_offline"));
     m_model->setShowAway(purple_prefs_get_bool("/konqix/blist/show_away"));
+    m_model->setShowStatusIcons(purple_prefs_get_bool("/konqix/blist/show_status_icons"));
     m_model->setLastSeenDisplay(BuddyListModel::parseLastSeenDisplay(
         QString::fromUtf8(purple_prefs_get_string("/konqix/blist/last_seen_display"))));
     m_model->setSortByStatus(purple_prefs_get_bool("/konqix/blist/sort_by_status"));
@@ -262,6 +251,15 @@ void MainWindow::buildMenus()
     showAway->setCheckable(true);
     showAway->setChecked(m_model->showAway());
     connect(showAway, &QAction::toggled, this, &MainWindow::onShowAwayToggled);
+
+    auto *showStatusIcons = viewMenu->addAction(tr("Show status &icons"));
+    showStatusIcons->setCheckable(true);
+    showStatusIcons->setChecked(m_model->showStatusIcons());
+    connect(showStatusIcons, &QAction::toggled, this, [this](bool on) {
+        m_model->setShowStatusIcons(on);
+        purple_prefs_set_bool("/konqix/blist/show_status_icons",
+                              on ? TRUE : FALSE);
+    });
 
     viewMenu->addSeparator();
     auto *sortMenu = viewMenu->addMenu(tr("&Sort by"));

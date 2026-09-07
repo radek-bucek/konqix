@@ -4,6 +4,7 @@
 #include "BuddyListModel.h"
 #include "ConversationManager.h"
 #include "MessageState.h"
+#include "StatusIcons.h"
 
 #include <QBrush>
 #include <QColor>
@@ -17,6 +18,7 @@ extern "C" {
 #include <libpurple/log.h>
 #include <libpurple/notify.h>
 #include <libpurple/prpl.h>
+#include <libpurple/status.h>
 }
 
 #include <QHash>
@@ -623,6 +625,16 @@ QVariant BuddyListModel::data(const QModelIndex &index, int role) const
         return attnIcon;
     }
 
+    if (role == Qt::DecorationRole && m_showStatusIcons
+        && (type == PURPLE_BLIST_BUDDY_NODE || type == PURPLE_BLIST_CONTACT_NODE)) {
+        PurpleBuddy *b = (type == PURPLE_BLIST_BUDDY_NODE)
+            ? reinterpret_cast<PurpleBuddy *>(node)
+            : purple_contact_get_priority_buddy(
+                  reinterpret_cast<PurpleContact *>(node));
+        if (b)
+            return iconForStatusPrimitive(statusPrimitiveForBuddy(b));
+    }
+
     if (role == Qt::ForegroundRole) {
         PurpleBuddy *b = nullptr;
         if (type == PURPLE_BLIST_BUDDY_NODE)
@@ -685,6 +697,18 @@ void BuddyListModel::setShowAway(bool show)
         return;
     m_showAway = show;
     rebuild();
+}
+
+void BuddyListModel::setShowStatusIcons(bool show)
+{
+    if (m_showStatusIcons == show)
+        return;
+    m_showStatusIcons = show;
+    // Decoration only — no re-sort or visibility change — but rebuild()
+    // is the cheapest way to force every visible row to re-fetch its
+    // roles. The conv window's peer widget listens to the extra signal.
+    rebuild();
+    emit showStatusIconsChanged(show);
 }
 
 BuddyListModel::LastSeenDisplay
@@ -777,7 +801,9 @@ void BuddyListModel::rebuild()
 
 void BuddyListModel::nodeUpdated(PurpleBlistNode *node)
 {
-    Q_UNUSED(node);
+    if (PurpleBuddy *b = nodeBuddy(node))
+        emit buddyStatusChanged(b);
+
     static bool pending = false;
     if (pending) return;
     pending = true;
@@ -787,8 +813,14 @@ void BuddyListModel::nodeUpdated(PurpleBlistNode *node)
     });
 }
 
-void BuddyListModel::nodeRemoved(PurpleBlistNode *)
+void BuddyListModel::nodeRemoved(PurpleBlistNode *node)
 {
+    // libpurple frees the node right after the remove ui-op returns.
+    // Warn any listener holding a raw PurpleBuddy* (e.g. the
+    // conversation window's peer widget) so they can null it out
+    // before we return control to libpurple.
+    if (PurpleBuddy *b = nodeBuddy(node))
+        emit buddyRemoved(b);
     rebuild();
 }
 

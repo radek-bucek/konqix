@@ -46,6 +46,8 @@ public:
     bool showOffline() const { return m_showOffline; }
     void setShowAway(bool show);
     bool showAway() const { return m_showAway; }
+    void setShowStatusIcons(bool show);
+    bool showStatusIcons() const { return m_showStatusIcons; }
     enum class LastSeenDisplay {
         Off,           // no suffix
         Approximate,   // "5m ago" / "3h ago" / "2d ago" / date
@@ -72,6 +74,19 @@ public:
 
 signals:
     void modelChanged();
+    // Fired synchronously whenever a blist update resolves to a buddy —
+    // e.g. the conversation window header uses this to keep its peer
+    // status icon live without waiting for the (debounced) full rebuild.
+    void buddyStatusChanged(PurpleBuddy *buddy);
+    // Fired synchronously just before libpurple frees a buddy (blist
+    // remove ui-op). Anything holding a raw PurpleBuddy* — e.g. the
+    // conversation window's peer widget — must drop it on this signal
+    // or the next dereference will hit freed memory.
+    void buddyRemoved(PurpleBuddy *buddy);
+    // Fired when the "show status icons" pref is toggled at runtime.
+    // The conversation window's peer widget uses this to show/hide
+    // itself in step with the buddy list icons.
+    void showStatusIconsChanged(bool show);
 
 private:
     bool nodeVisible(PurpleBlistNode *node) const;
@@ -91,6 +106,7 @@ private:
 
     bool m_showOffline = false;
     bool m_showAway = true;
+    bool m_showStatusIcons = true;
     LastSeenDisplay m_lastSeenDisplay = LastSeenDisplay::Off;
     bool m_sortByStatus = true;
     SecondarySort m_secondarySort = SecondarySort::Name;

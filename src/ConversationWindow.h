@@ -69,12 +69,26 @@ private:
     // an image thumbnail or a generic file icon + filename tile.
     void addAttachment(const QString &path);
     void removePendingAttachment(const QString &path);
+    // Refresh the peer name + status icon in the menu bar's corner
+    // widget from m_peerBuddy's current presence. No-op for chats /
+    // conversations with no matching blist entry.
+    void updatePeerStatus();
 
     PurpleConversation *m_conv;
     QTextBrowser *m_history = nullptr;
     QTextEdit *m_input = nullptr;
     QListWidget *m_userList = nullptr;
     QLabel *m_topic = nullptr;
+
+    // IM peer name + status icon, shown in the menu bar's top-right
+    // corner. Null for chats (no single peer) or when the conversation
+    // name doesn't resolve to a blist buddy. m_peerWidget wraps the
+    // icon + label together so we can hide/show the whole thing in
+    // step with the View → Show status icons toggle.
+    struct _PurpleBuddy *m_peerBuddy = nullptr;
+    QWidget *m_peerWidget = nullptr;
+    QLabel *m_peerStatusIcon = nullptr;
+    QLabel *m_peerNameLabel = nullptr;
     // Held only when HAVE_HUNSPELL was defined at compile time, but a
     // void* placeholder lets us reach into it from non-spell-aware code
     // without sprinkling #ifdefs all over the header.
