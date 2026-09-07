@@ -292,6 +292,17 @@ ConversationWindow::ConversationWindow(PurpleConversation *conv, QWidget *parent
                         if (b == m_peerBuddy)
                             updatePeerStatus();
                     });
+                // libpurple frees the buddy right after the remove
+                // ui-op returns — drop our raw pointer to it and hide
+                // the peer widget before any later access can touch
+                // freed memory (updatePeerStatus() would otherwise call
+                // purple_buddy_get_alias on the dangling handle).
+                connect(blm, &BuddyListModel::buddyRemoved, this,
+                    [this, peerWidget](PurpleBuddy *b) {
+                        if (b != m_peerBuddy) return;
+                        m_peerBuddy = nullptr;
+                        if (peerWidget) peerWidget->hide();
+                    });
             }
         }
     }

@@ -801,8 +801,14 @@ void BuddyListModel::nodeUpdated(PurpleBlistNode *node)
     });
 }
 
-void BuddyListModel::nodeRemoved(PurpleBlistNode *)
+void BuddyListModel::nodeRemoved(PurpleBlistNode *node)
 {
+    // libpurple frees the node right after the remove ui-op returns.
+    // Warn any listener holding a raw PurpleBuddy* (e.g. the
+    // conversation window's peer widget) so they can null it out
+    // before we return control to libpurple.
+    if (PurpleBuddy *b = nodeBuddy(node))
+        emit buddyRemoved(b);
     rebuild();
 }
 

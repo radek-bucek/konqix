@@ -76,6 +76,11 @@ signals:
     // e.g. the conversation window header uses this to keep its peer
     // status icon live without waiting for the (debounced) full rebuild.
     void buddyStatusChanged(PurpleBuddy *buddy);
+    // Fired synchronously just before libpurple frees a buddy (blist
+    // remove ui-op). Anything holding a raw PurpleBuddy* — e.g. the
+    // conversation window's peer widget — must drop it on this signal
+    // or the next dereference will hit freed memory.
+    void buddyRemoved(PurpleBuddy *buddy);
 
 private:
     bool nodeVisible(PurpleBlistNode *node) const;
