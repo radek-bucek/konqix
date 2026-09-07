@@ -82,8 +82,11 @@ private:
 
     // IM peer name + status icon, shown in the menu bar's top-right
     // corner. Null for chats (no single peer) or when the conversation
-    // name doesn't resolve to a blist buddy.
+    // name doesn't resolve to a blist buddy. m_peerWidget wraps the
+    // icon + label together so we can hide/show the whole thing in
+    // step with the View → Show status icons toggle.
     struct _PurpleBuddy *m_peerBuddy = nullptr;
+    QWidget *m_peerWidget = nullptr;
     QLabel *m_peerStatusIcon = nullptr;
     QLabel *m_peerNameLabel = nullptr;
     // Held only when HAVE_HUNSPELL was defined at compile time, but a

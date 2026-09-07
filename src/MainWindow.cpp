@@ -67,6 +67,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // Apply persisted prefs to the model.
     m_model->setShowOffline(purple_prefs_get_bool("/konqix/blist/show_offline"));
     m_model->setShowAway(purple_prefs_get_bool("/konqix/blist/show_away"));
+    m_model->setShowStatusIcons(purple_prefs_get_bool("/konqix/blist/show_status_icons"));
     m_model->setLastSeenDisplay(BuddyListModel::parseLastSeenDisplay(
         QString::fromUtf8(purple_prefs_get_string("/konqix/blist/last_seen_display"))));
     m_model->setSortByStatus(purple_prefs_get_bool("/konqix/blist/sort_by_status"));
@@ -250,6 +251,15 @@ void MainWindow::buildMenus()
     showAway->setCheckable(true);
     showAway->setChecked(m_model->showAway());
     connect(showAway, &QAction::toggled, this, &MainWindow::onShowAwayToggled);
+
+    auto *showStatusIcons = viewMenu->addAction(tr("Show status &icons"));
+    showStatusIcons->setCheckable(true);
+    showStatusIcons->setChecked(m_model->showStatusIcons());
+    connect(showStatusIcons, &QAction::toggled, this, [this](bool on) {
+        m_model->setShowStatusIcons(on);
+        purple_prefs_set_bool("/konqix/blist/show_status_icons",
+                              on ? TRUE : FALSE);
+    });
 
     viewMenu->addSeparator();
     auto *sortMenu = viewMenu->addMenu(tr("&Sort by"));

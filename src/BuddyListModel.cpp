@@ -625,7 +625,7 @@ QVariant BuddyListModel::data(const QModelIndex &index, int role) const
         return attnIcon;
     }
 
-    if (role == Qt::DecorationRole
+    if (role == Qt::DecorationRole && m_showStatusIcons
         && (type == PURPLE_BLIST_BUDDY_NODE || type == PURPLE_BLIST_CONTACT_NODE)) {
         PurpleBuddy *b = (type == PURPLE_BLIST_BUDDY_NODE)
             ? reinterpret_cast<PurpleBuddy *>(node)
@@ -697,6 +697,18 @@ void BuddyListModel::setShowAway(bool show)
         return;
     m_showAway = show;
     rebuild();
+}
+
+void BuddyListModel::setShowStatusIcons(bool show)
+{
+    if (m_showStatusIcons == show)
+        return;
+    m_showStatusIcons = show;
+    // Decoration only — no re-sort or visibility change — but rebuild()
+    // is the cheapest way to force every visible row to re-fetch its
+    // roles. The conv window's peer widget listens to the extra signal.
+    rebuild();
+    emit showStatusIconsChanged(show);
 }
 
 BuddyListModel::LastSeenDisplay

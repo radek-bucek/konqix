@@ -263,7 +263,8 @@ ConversationWindow::ConversationWindow(PurpleConversation *conv, QWidget *parent
         m_peerBuddy = (convAcc && peerName)
             ? purple_find_buddy(convAcc, peerName) : nullptr;
         if (m_peerBuddy) {
-            auto *peerWidget = new QWidget(menuBar);
+            m_peerWidget = new QWidget(menuBar);
+            auto *peerWidget = m_peerWidget;
             auto *peerLayout = new QHBoxLayout(peerWidget);
             peerLayout->setContentsMargins(0, 0, 8, 0);
             peerLayout->setSpacing(4);
@@ -286,6 +287,10 @@ ConversationWindow::ConversationWindow(PurpleConversation *conv, QWidget *parent
             menuBar->setCornerWidget(peerWidget, Qt::TopRightCorner);
 
             updatePeerStatus();
+            // Initial visibility mirrors the buddy list's status icon
+            // toggle so both places switch together.
+            m_peerWidget->setVisible(
+                purple_prefs_get_bool("/konqix/blist/show_status_icons"));
             if (auto *blm = BuddyListModel::instance()) {
                 connect(blm, &BuddyListModel::buddyStatusChanged, this,
                     [this](PurpleBuddy *b) {
@@ -298,10 +303,15 @@ ConversationWindow::ConversationWindow(PurpleConversation *conv, QWidget *parent
                 // freed memory (updatePeerStatus() would otherwise call
                 // purple_buddy_get_alias on the dangling handle).
                 connect(blm, &BuddyListModel::buddyRemoved, this,
-                    [this, peerWidget](PurpleBuddy *b) {
+                    [this](PurpleBuddy *b) {
                         if (b != m_peerBuddy) return;
                         m_peerBuddy = nullptr;
-                        if (peerWidget) peerWidget->hide();
+                        if (m_peerWidget) m_peerWidget->hide();
+                    });
+                connect(blm, &BuddyListModel::showStatusIconsChanged, this,
+                    [this](bool show) {
+                        if (m_peerWidget && m_peerBuddy)
+                            m_peerWidget->setVisible(show);
                     });
             }
         }
