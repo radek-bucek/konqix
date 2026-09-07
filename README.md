@@ -47,8 +47,10 @@ involved.
   number is the username) the Username field shows a placeholder pulled
   from `get_account_text_table()->login_label`
   (e.g. "phone no. (+ country prefix)").
-- Persistent main window geometry across restarts (works on Wayland by
-  preferring the XCB platform plugin via `QT_QPA_PLATFORM=xcb`).
+- Runs as a native Wayland client under a Plasma Wayland session (Qt's
+  `wayland` platform plugin). Window size and maximized state persist
+  across restarts; absolute window position does not, since Wayland
+  doesn't expose that to clients — same as any other native Wayland app.
 
 ## What is (intentionally) missing
 

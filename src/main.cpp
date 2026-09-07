@@ -67,12 +67,16 @@ int main(int argc, char *argv[])
     std::setlocale(LC_ALL, "C.UTF-8");
     QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates));
 
-    // Force XCB (X11 via XWayland on Wayland sessions) so we can persist the
-    // window position — pure Wayland never exposes the absolute x/y of our
-    // own surface to us. Users can override with QT_QPA_PLATFORM=wayland if
-    // they don't care about position memory.
-    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM"))
-        qputenv("QT_QPA_PLATFORM", "xcb");
+    // Let Qt pick the native platform plugin (wayland under a Plasma
+    // Wayland session, xcb under X11). We used to force xcb so we could
+    // persist the absolute window position — pure Wayland never exposes
+    // the x/y of our own surface to us — but that meant konqix never ran
+    // as a real Wayland client (no native decorations, fractional-scale
+    // quirks, XWayland input-method issues, etc.). Position restore now
+    // silently degrades to "let the compositor place it" on Wayland,
+    // same as every other native Wayland app; size and maximized state
+    // still restore fine. Force xcb yourself via QT_QPA_PLATFORM=xcb if
+    // you need window-position memory more than native Wayland.
 
     // Honour fractional desktop scaling (e.g. KWin's 1.25x). Default Qt 6
     // policy is RoundPreferFloor → on a 1.25-scale desktop we'd render at
