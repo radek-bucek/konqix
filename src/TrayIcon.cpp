@@ -7,6 +7,7 @@
 #include "MessageState.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QIcon>
 #include <QMenu>
@@ -45,22 +46,24 @@ void TrayIcon::buildMenu()
 
     m_menu->addSeparator();
 
-    auto *availAct = m_menu->addAction(QObject::tr("Available"));
-    connect(availAct, &QAction::triggered, m_window, [this]() {
-        m_window->changeStatus(PURPLE_STATUS_AVAILABLE);
-    });
-    auto *awayAct = m_menu->addAction(QObject::tr("Away"));
-    connect(awayAct, &QAction::triggered, m_window, [this]() {
-        m_window->changeStatus(PURPLE_STATUS_AWAY);
-    });
-    auto *invisibleAct = m_menu->addAction(QObject::tr("Invisible"));
-    connect(invisibleAct, &QAction::triggered, m_window, [this]() {
-        m_window->changeStatus(PURPLE_STATUS_INVISIBLE);
-    });
-    auto *offlineAct = m_menu->addAction(QObject::tr("Offline"));
-    connect(offlineAct, &QAction::triggered, m_window, [this]() {
-        m_window->changeStatus(PURPLE_STATUS_OFFLINE);
-    });
+    auto *statusGroup = new QActionGroup(m_menu);
+
+    auto addStatusAction = [this, statusGroup](const QString &text, PurpleStatusPrimitive prim) {
+        auto *act = m_menu->addAction(text);
+        act->setCheckable(true);
+        statusGroup->addAction(act);
+        connect(act, &QAction::triggered, m_window, [this, prim]() {
+            m_window->changeStatus(prim);
+        });
+        m_statusActions.insert(int(prim), act);
+    };
+
+    addStatusAction(QObject::tr("Available"), PURPLE_STATUS_AVAILABLE);
+    addStatusAction(QObject::tr("Away"), PURPLE_STATUS_AWAY);
+    addStatusAction(QObject::tr("Invisible"), PURPLE_STATUS_INVISIBLE);
+    addStatusAction(QObject::tr("Offline"), PURPLE_STATUS_OFFLINE);
+
+    connect(m_menu, &QMenu::aboutToShow, this, &TrayIcon::rebuildStatusActions);
 
     m_menu->addSeparator();
 
@@ -76,6 +79,15 @@ void TrayIcon::buildMenu()
     connect(quitAct, &QAction::triggered, qApp, &QCoreApplication::quit);
 
     m_icon->setContextMenu(m_menu);
+}
+
+void TrayIcon::rebuildStatusActions()
+{
+    int curPrim = purple_prefs_get_int("/konqix/status/last_primitive");
+    if (curPrim == 0) curPrim = int(PURPLE_STATUS_AVAILABLE);
+
+    for (auto it = m_statusActions.constBegin(); it != m_statusActions.constEnd(); ++it)
+        it.value()->setChecked(it.key() == curPrim);
 }
 
 void TrayIcon::show()

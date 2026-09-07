@@ -5,8 +5,10 @@
 
 #include <QObject>
 #include <QSystemTrayIcon>
+#include <QMap>
 
 class QMenu;
+class QAction;
 
 namespace konqix {
 
@@ -32,6 +34,7 @@ private:
     QSystemTrayIcon *m_icon = nullptr;
     QMenu *m_menu = nullptr;
     MainWindow *m_window = nullptr;
+    QMap<int, QAction *> m_statusActions;
 };
 
 } // namespace konqix
