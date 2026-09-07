@@ -72,6 +72,10 @@ public:
 
 signals:
     void modelChanged();
+    // Fired synchronously whenever a blist update resolves to a buddy —
+    // e.g. the conversation window header uses this to keep its peer
+    // status icon live without waiting for the (debounced) full rebuild.
+    void buddyStatusChanged(PurpleBuddy *buddy);
 
 private:
     bool nodeVisible(PurpleBlistNode *node) const;

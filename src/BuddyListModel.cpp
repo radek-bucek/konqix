@@ -183,20 +183,6 @@ static int statusRank(PurpleBuddy *b)
     return 10;
 }
 
-// The primitive behind a buddy's active status, for icon lookup via
-// iconForStatusPrimitive() — the same mapping the status combo box and
-// tray/title-bar icon use. Offline buddies have no active status object
-// worth inspecting, so that case is resolved explicitly.
-static int statusPrimitiveForBuddy(PurpleBuddy *b)
-{
-    if (!b || !PURPLE_BUDDY_IS_ONLINE(b))
-        return PURPLE_STATUS_OFFLINE;
-    PurplePresence *p = purple_buddy_get_presence(b);
-    PurpleStatus *s = p ? purple_presence_get_active_status(p) : nullptr;
-    PurpleStatusType *t = s ? purple_status_get_type(s) : nullptr;
-    return t ? purple_status_type_get_primitive(t) : PURPLE_STATUS_AVAILABLE;
-}
-
 static PurpleBuddy *nodeBuddy(PurpleBlistNode *n)
 {
     auto t = purple_blist_node_get_type(n);
@@ -803,7 +789,9 @@ void BuddyListModel::rebuild()
 
 void BuddyListModel::nodeUpdated(PurpleBlistNode *node)
 {
-    Q_UNUSED(node);
+    if (PurpleBuddy *b = nodeBuddy(node))
+        emit buddyStatusChanged(b);
+
     static bool pending = false;
     if (pending) return;
     pending = true;
