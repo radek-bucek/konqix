@@ -383,10 +383,10 @@ QString BuddyListModel::lastSeenLabel(PurpleBuddy *b) const
     const int now = (int)time(nullptr);
     // Available buddies fall through nodeLastSeen()'s presence branch to
     // time(nullptr) — showing "HH:mm" for someone who's live *now* is
-    // noise that would tick every rebuild. Skip when the value is
-    // essentially "now" (within a minute).
+    // noise that would tick every rebuild. Collapse everything within
+    // the last minute to a stable "now" label instead.
     if (now - seen < 60)
-        return {};
+        return QStringLiteral("now");
     return (m_lastSeenDisplay == LastSeenDisplay::Exact)
         ? formatLastSeenExact(seen, now)
         : formatLastSeenApprox(seen, now);
