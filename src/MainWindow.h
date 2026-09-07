@@ -56,7 +56,6 @@ private:
     BuddyListModel *m_model = nullptr;
     QTreeView *m_tree = nullptr;
     QComboBox *m_statusCombo = nullptr;
-    QLabel *m_statusInfo = nullptr;
     QFrame *m_warningBanner = nullptr;
     QLabel *m_warningLabel = nullptr;
 };

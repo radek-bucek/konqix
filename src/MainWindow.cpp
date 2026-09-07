@@ -472,14 +472,12 @@ void MainWindow::buildStatusBar()
         changeStatus(m_statusCombo->currentData().toInt());
     });
 
-    m_statusInfo = new QLabel(this);
-
-    statusBar()->addPermanentWidget(new QLabel(tr("Status:")));
-    statusBar()->addPermanentWidget(m_statusCombo);
-    statusBar()->addWidget(m_statusInfo, 1);
-    // 3 px right margin; Breeze's top separator line is suppressed by the
-    // FlatStatusBarStyle in main.cpp so we don't need a QSS border override.
-    statusBar()->setContentsMargins(0, 0, 3, 0);
+    statusBar()->addWidget(new QLabel(tr("Status:")));
+    statusBar()->addWidget(m_statusCombo, 1);
+    // 3 px left/right margins; Breeze's top separator line is suppressed by
+    // the FlatStatusBarStyle in main.cpp so we don't need a QSS border
+    // override.
+    statusBar()->setContentsMargins(3, 0, 3, 0);
     statusBar()->setSizeGripEnabled(false);
 }
 
