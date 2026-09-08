@@ -157,6 +157,24 @@ The package installs:
 - `/usr/share/applications/konqix.desktop`
 - `/usr/share/icons/hicolor/scalable/apps/konqix.svg`
 
+## Installing on Arch Linux
+
+konqix isn't in the official Arch repos or the AUR yet. A `PKGBUILD`
+is maintained separately at
+[asmbk/aur-konqix](https://github.com/asmbk/aur-konqix) (unofficial,
+not maintained by this project):
+
+```bash
+git clone https://github.com/asmbk/aur-konqix.git
+cd aur-konqix
+yay -Bi .    # or: paru -Bi .
+```
+
+`libpurple` itself is AUR-only (not in the official repos), so an AUR
+helper is the easiest path — see that repo's README for the fully
+manual install steps (no AUR helper needed) and for keeping the
+package up to date across releases.
+
 ## Project layout
 
 ```
