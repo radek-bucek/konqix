@@ -1,0 +1,18 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: konqix
+Upstream-Contact: Radek Bucek <288079766+radek-bucek@users.noreply.github.com>
+Source: https://github.com/radek-bucek/konqix
+
+Files: *
+Copyright: 2026 Radek Bucek
+License: GPL-2.0-or-later
+
+License: GPL-2.0-or-later
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ .
+ On Debian systems, the complete text of the GNU General Public
+ License version 2 can be found in
+ "/usr/share/common-licenses/GPL-2".

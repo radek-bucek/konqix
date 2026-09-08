@@ -1,0 +1,34 @@
+Source: konqix
+Section: net
+Priority: optional
+Maintainer: Radek Bucek <288079766+radek-bucek@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 14),
+               dh-sequence-single-binary,
+               cmake (>= 3.16),
+               pkgconf,
+               libpurple-dev,
+               qt6-base-dev,
+               libkf6windowsystem-dev,
+               libhunspell-dev,
+               desktop-file-utils
+Standards-Version: 4.6.2
+Homepage: https://github.com/radek-bucek/konqix
+Rules-Requires-Root: no
+
+Package: konqix
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: hunspell-en-US
+Description: Qt 6 instant messenger built on libpurple
+ A native Qt 6 frontend for libpurple - a clean-room UI that talks to
+ libpurple directly through the PurpleXxxUiOps callback interface and
+ reuses all of libpurple's protocol plugins (XMPP, IRC, SIMPLE, Bonjour,
+ Gadu-Gadu, and any third-party plugins installed in the system or
+ per-user purple plugin directory).
+ .
+ Features include a grouped buddy list with offline-hiding, IM and chat
+ windows with inline image rendering and 12-hour history preview, a
+ separate searchable history dialog, account management with
+ protocol-specific options, a system tray icon with three states
+ (online, attention, offline), and configuration read from libpurple's
+ standard ~/.purple/ directory.
