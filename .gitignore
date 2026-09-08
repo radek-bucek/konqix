@@ -1,11 +1,20 @@
 # CMake / build outputs
 /build/
 /build-*/
+/obj-*/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
 *.cbp
+
+# debhelper build byproducts (debian/rules binary leaves these behind)
+/debian/.debhelper/
+/debian/debhelper-build-stamp
+/debian/files
+/debian/konqix/
+/debian/konqix.substvars
+/debian/*.debhelper.log
 
 # Local backups created by the project's own backup script
 /backup-*/

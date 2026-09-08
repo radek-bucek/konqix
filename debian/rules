@@ -1,0 +1,8 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_test:
+	# No test suite; the RPM spec's %check only runs desktop-file-validate.
+	desktop-file-validate packaging/com.konqix.Konqix.desktop
