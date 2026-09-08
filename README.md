@@ -49,6 +49,12 @@ involved.
   (e.g. "phone no. (+ country prefix)").
 - Persistent main window geometry across restarts (works on Wayland by
   preferring the XCB platform plugin via `QT_QPA_PLATFORM=xcb`).
+- **Start on login** (File → Start on login): writes a per-user XDG
+  autostart entry at `~/.config/autostart/com.konqix.Konqix.desktop`,
+  honoured by GNOME, KDE, XFCE, and MATE with no extra setup. The
+  autostart entry launches with `--minimized` so login doesn't pop the
+  buddy list window open — only the tray icon appears; run `konqix`
+  from the application menu as usual to open the window directly.
 
 ## What is (intentionally) missing
 
