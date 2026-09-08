@@ -19,6 +19,7 @@ pkg_check_modules(HUNSPELL IMPORTED_TARGET hunspell)
 
 add_executable(konqix
     src/main.cpp
+    src/AutostartManager.cpp
     src/PurpleCore.cpp
     src/QtEventLoop.cpp
     src/MainWindow.cpp
