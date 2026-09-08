@@ -4,6 +4,7 @@
 #include "MainWindow.h"
 #include "BuddyListModel.h"
 #include "AccountsDialog.h"
+#include "AutostartManager.h"
 #include "ConversationManager.h"
 #include "HistoryDialog.h"
 #include "HtmlItemDelegate.h"
@@ -236,6 +237,14 @@ void MainWindow::buildMenus()
 
     auto *addGroupAct = fileMenu->addAction(tr("Add &Group…"));
     connect(addGroupAct, &QAction::triggered, this, &MainWindow::addGroup);
+
+    fileMenu->addSeparator();
+    auto *startOnLoginAct = fileMenu->addAction(tr("Start on &login"));
+    startOnLoginAct->setCheckable(true);
+    startOnLoginAct->setChecked(AutostartManager::isEnabled());
+    connect(startOnLoginAct, &QAction::toggled, this, [](bool on) {
+        AutostartManager::setEnabled(on);
+    });
 
     fileMenu->addSeparator();
     auto *quitAct = fileMenu->addAction(tr("&Quit"));

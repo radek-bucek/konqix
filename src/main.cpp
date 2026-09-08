@@ -120,8 +120,14 @@ int main(int argc, char *argv[])
     // ConversationManager is constructed before libpurple inits.)
     convManager.connectLibpurpleSignals();
 
+    // Autostart launches pass --minimized so login doesn't pop the buddy
+    // list open every time; the app-menu launcher's Exec= has no flags, so
+    // manually-started instances still show immediately as before.
+    const bool startMinimized = app.arguments().contains(QStringLiteral("--minimized"));
+
     konqix::MainWindow window;
-    window.show();
+    if (!startMinimized)
+        window.show();
 
     // Background-build / refresh the SQLite log index. First run on a large
     // archive can take ~30 s; subsequent runs only stat changed files.
@@ -131,8 +137,8 @@ int main(int argc, char *argv[])
     QPointer<QDialog> indexDlg;
     konqix::LogIndex *li = konqix::LogIndex::instance();
     QObject::connect(li, &konqix::LogIndex::progressChanged, &window,
-        [&window, &indexDlg](int done, int total) {
-            if (!indexDlg && done < total) {
+        [&window, &indexDlg, startMinimized](int done, int total) {
+            if (!indexDlg && !startMinimized && done < total) {
                 indexDlg = new QDialog(&window, Qt::Tool);
                 indexDlg->setAttribute(Qt::WA_DeleteOnClose);
                 indexDlg->setWindowTitle(
