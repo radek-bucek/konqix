@@ -1,5 +1,5 @@
 Name:           konqix
-Version:        0.1.3
+Version:        0.1.4
 Release:        1%{?dist}
 Summary:        Qt 6 instant messenger built on libpurple
 
@@ -57,6 +57,29 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/com.konqix.Konqix.des
 %{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
 
 %changelog
+* Mon Sep 08 2026 Radek Bucek <288079766+radek-bucek@users.noreply.github.com> - 0.1.4-1
+- Per-buddy status icon in the buddy list (via Qt::DecorationRole)
+  and matching peer name + icon in the IM conversation window's
+  menu-bar corner. Shared PurpleStatusPrimitive → QIcon mapping
+  lives in src/StatusIcons.h.
+- View → Show status icons toggle (default on) gates both the buddy
+  list icon and the conversation-window peer widget in step; new
+  pref /konqix/blist/show_status_icons.
+- Tray menu status entries (Available / Away / Invisible / Offline)
+  are now radio-checkable via QActionGroup; the entry matching the
+  active primitive gets the tick, refreshed on QMenu::aboutToShow
+  so it stays in sync with status changes made elsewhere.
+- Fix: null the conversation window's PurpleBuddy* before libpurple
+  frees it. New BuddyListModel::buddyRemoved signal fires from the
+  blist-remove ui-op; the peer widget drops the dangling pointer
+  and hides itself before any later access can deref freed memory
+  inside purple_buddy_get_alias.
+- Buddies seen within the last minute now render as "now" instead
+  of an empty label pair — visually consistent with the other
+  last-seen rows, especially in Exact mode.
+- Dead spacer widget m_statusInfo removed from the status bar;
+  QStatusBar's addPermanentWidget already right-anchors the
+  "Status:" label and combo, so the spacer was a no-op.
 * Wed Sep 02 2026 Radek Bucek <288079766+radek-bucek@users.noreply.github.com> - 0.1.3-1
 - New buddy list "last seen" indicator. View → Show last seen offers
   Off (default), Approximate ("5 min ago" / "3 h ago" / "2 d ago" /
