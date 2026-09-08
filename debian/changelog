@@ -1,0 +1,5 @@
+konqix (0.1.4-1) unstable; urgency=medium
+
+  * Initial Debian packaging.
+
+ -- Radek Bucek <288079766+radek-bucek@users.noreply.github.com>  Tue, 08 Sep 2026 09:24:48 +0200
