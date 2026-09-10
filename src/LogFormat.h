@@ -50,6 +50,16 @@ QString styleQuotes(const QString &bodyHtml);
 // the way we want: inline images, no broken "<a href=…>foo.jpg</a>"
 // hyperlinks, and a two-row "header / body" layout per message.
 
+// Wraps bare URLs in the raw message text with "<a href="…">" anchors,
+// via libpurple's own purple_markup_linkify() — it's tag-aware (skips
+// anything already inside a tag or attribute), so it's safe to run even
+// when the text already contains other HTML. Should run first, before
+// the image/newline/quote helpers below, matching how libpurple's own
+// UIs (e.g. Pidgin) order their message pipeline. Without this, a bare
+// "https://…" in a plain-text message renders as inert text — QTextEdit
+// / QTextBrowser have no built-in autodetection for that.
+QString linkify(const QString &html);
+
 // Expand "<img id=\"N\">" tags into a base64 data URI by looking the image
 // up in libpurple's imgstore.
 QString resolveImgIds(const QString &html);

@@ -155,6 +155,7 @@ protected:
 using konqix::colorForSender;
 using konqix::convertNewlines;
 using konqix::isTransferNoise;
+using konqix::linkify;
 using konqix::reformatLogMessages;
 using konqix::resolveImgIds;
 using konqix::resolveImgPaths;
@@ -1139,11 +1140,13 @@ void ConversationWindow::appendMessage(const QString &who, const QString &alias,
     }
 
     // libpurple often passes message text that already contains HTML — keep
-    // it, but expand <img id="N"> tags via the imgstore to inline data URIs,
-    // and rewrite relative <img src> to absolute file:// so QTextBrowser
-    // can find received images saved next to the log files. Also collapse
+    // it, but wrap any bare URL in a clickable <a href> first (tag-aware,
+    // so it won't touch markup the prpl already sent), then expand
+    // <img id="N"> tags via the imgstore to inline data URIs, and rewrite
+    // relative <img src> to absolute file:// so QTextBrowser can find
+    // received images saved next to the log files. Also collapse
     // libpurple-xfer-style image hyperlinks into <img> tags.
-    QString body = rewriteImageLinks(resolveImgIds(message));
+    QString body = rewriteImageLinks(resolveImgIds(linkify(message)));
     if (m_conv) {
         PurpleLogType lt = (purple_conversation_get_type(m_conv) == PURPLE_CONV_TYPE_CHAT)
                           ? PURPLE_LOG_CHAT : PURPLE_LOG_IM;

@@ -381,7 +381,7 @@ QString HistoryDialog::renderMessages(const QList<IndexedMessage> &msgs) const
                               .toString(QStringLiteral("yyyy-MM-dd"));
         QString timePart = QDateTime::fromSecsSinceEpoch(m.ts)
                               .toString(QStringLiteral("HH:mm:ss"));
-        QString body = highlightBody(styleQuotes(m.bodyHtml));
+        QString body = highlightBody(styleQuotes(linkify(m.bodyHtml)));
         if (m.sender.isEmpty()) {
             out += QStringLiteral(
                 "<div style='margin:3px 0 0 0'>"

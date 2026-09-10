@@ -13,9 +13,20 @@
 
 extern "C" {
 #include <libpurple/imgstore.h>
+#include <libpurple/util.h>
 }
 
 namespace konqix {
+
+QString linkify(const QString &html)
+{
+    char *linked = purple_markup_linkify(html.toUtf8().constData());
+    if (!linked)
+        return html;
+    QString result = QString::fromUtf8(linked);
+    g_free(linked);
+    return result;
+}
 
 QString resolveImgIds(const QString &html)
 {
@@ -282,7 +293,7 @@ static QString reformatLogLine(const QString &line, const QString &datePart,
     if (!p.hasSender && isTransferNoise(p.bodyRaw))
         return QString();
 
-    QString body = styleQuotes(convertNewlines(p.bodyRaw).trimmed());
+    QString body = styleQuotes(convertNewlines(linkify(p.bodyRaw)).trimmed());
     if (p.hasSender) {
         QString color = p.color;
         if (isChat) {
